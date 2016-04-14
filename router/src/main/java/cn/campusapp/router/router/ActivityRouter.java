@@ -10,8 +10,10 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import cn.campusapp.router.BuildConfig;
 import cn.campusapp.router.exception.InvalidRoutePathException;
@@ -31,22 +33,21 @@ import static cn.campusapp.router.utils.UrlUtils.getScheme;
  * Created by kris on 16/3/10.
  */
 public class ActivityRouter extends BaseRouter {
-    private static final String TAG = "Router";
-    private static String MATCH_SCHEME = "activity";
+    private static final String TAG = "ActivityRouter";
+    private static String MATCH_SCHEME = "hxstore";
+    private static final Set<String> HOSTS_CAN_OPEN = new LinkedHashSet<>();
+
     static ActivityRouter mSharedActivityRouter = new ActivityRouter();
     Context mBaseContext;
     Map<String, Class<? extends Activity>> mRouteTable = new HashMap<>();
-
 
     static {
         CAN_OPEN_ROUTE = ActivityRoute.class;
     }
 
-
     public static ActivityRouter getSharedRouter(){
         return mSharedActivityRouter;
     }
-
 
     public void init(Context appContext, IActivityRouteTableInitializer initializer) {
         mBaseContext = appContext;
@@ -56,6 +57,9 @@ public class ActivityRouter extends BaseRouter {
             if(!isValid){
                 Timber.e(new InvalidRoutePathException(pathRule), "");
                 mRouteTable.remove(pathRule);
+                HOSTS_CAN_OPEN.remove(getHost(pathRule));
+            }else {
+                HOSTS_CAN_OPEN.add(getHost(pathRule));
             }
         }
     }
@@ -77,9 +81,8 @@ public class ActivityRouter extends BaseRouter {
 
     @Override
     public boolean canOpenTheUrl(String url) {
-        return TextUtils.equals(getScheme(url), MATCH_SCHEME);
+        return TextUtils.equals(getScheme(url), MATCH_SCHEME) && HOSTS_CAN_OPEN.contains(getHost(url));
     }
-
 
     public void setMatchScheme(String scheme){
         MATCH_SCHEME = scheme;
@@ -219,102 +222,6 @@ public class ActivityRouter extends BaseRouter {
         return null;
     }
 
-    /**
-     * find the key value in the path and set them in the intent
-     * @param routeUrl the matched route path
-     * @param givenUrl the given path
-     * @param intent the intent
-     * @return the intent
-     */
-    private Intent setKeyValueInThePath(String routeUrl, String givenUrl, Intent intent) {
-        List<String> routePathSegs = getPathSegments(routeUrl);
-        List<String> givenPathSegs = getPathSegments(givenUrl);
-        for(int i = 0;i<routePathSegs.size();i++){
-            String seg = routePathSegs.get(i);
-            if(seg.startsWith(":")){
-                int indexOfLeft = seg.indexOf("{");
-                int indexOfRight = seg.indexOf("}");
-                String key = seg.substring(indexOfLeft + 1, indexOfRight);
-                char typeChar = seg.charAt(1);
-                switch (typeChar){
-                    //interger type
-                    case 'i':
-                        try {
-                            int value = Integer.parseInt(givenPathSegs.get(i));
-                            intent.putExtra(key, value);
-                        } catch(Exception e){
-                            Log.e(TAG, "解析整形类型失败 "+ givenPathSegs.get(i), e);
-                            if(BuildConfig.DEBUG){
-                                throw new InvalidValueTypeException(givenUrl, givenPathSegs.get(i));
-                            } else{
-                                //如果是在release情况下则给一个默认值
-                                intent.putExtra(key, 0);
-                            }
-                        }
-                        break;
-                    case 'f':
-                        //float type
-                        try {
-                            float value = Float.parseFloat(givenPathSegs.get(i));
-                            intent.putExtra(key, value);
-                        } catch(Exception e){
-                            Log.e(TAG, "解析浮点类型失败 " + givenPathSegs.get(i), e);
-                            if(BuildConfig.DEBUG) {
-                                throw new InvalidValueTypeException(givenUrl, givenPathSegs.get(i));
-                            } else {
-                                intent.putExtra(key, 0f);
-                            }
-                        }
-                        break;
-                    case 'l':
-                        //long type
-                        try{
-                            long value = Long.parseLong(givenPathSegs.get(i));
-                            intent.putExtra(key, value);
-                        } catch(Exception e){
-                            Log.e(TAG, "解析长整形失败 " + givenPathSegs.get(i), e);
-                            if(BuildConfig.DEBUG){
-                                throw new InvalidValueTypeException(givenUrl, givenPathSegs.get(i));
-                            } else {
-                                intent.putExtra(key, 0l);
-                            }
-                        }
-                        break;
-                    case 'd':
-                        try{
-                            double value = Double.parseDouble(givenPathSegs.get(i));
-                            intent.putExtra(key, value);
-                        } catch (Exception e){
-                            Log.e(TAG, "解析double类型失败 " + givenPathSegs.get(i), e);
-                            if(BuildConfig.DEBUG){
-                                throw new InvalidValueTypeException(givenUrl, givenPathSegs.get(i));
-                            } else {
-                                intent.putExtra(key, 0d);
-                            }
-                        }
-                        break;
-                    case 'c':
-                        try {
-                            char value = givenPathSegs.get(i).charAt(0);
-                        } catch(Exception e){
-                            Log.e(TAG, "解析Character类型失败" + givenPathSegs.get(i), e);
-                            if(BuildConfig.DEBUG){
-                                throw new InvalidValueTypeException(givenUrl, givenPathSegs.get(i));
-                            } else {
-                                intent.putExtra(key, ' ');
-                            }
-                        }
-                        break;
-                    case 's':
-                    default:
-                        intent.putExtra(key, givenPathSegs.get(i));
-                }
-            }
-
-        }
-        return intent;
-    }
-
     private Intent setOptionParams(String url, Intent intent){
         Map<String, String> queryParams = UrlUtils.getParameters(url);
         for(String key: queryParams.keySet()){
@@ -337,8 +244,6 @@ public class ActivityRouter extends BaseRouter {
         }
         Class<? extends Activity> matchedActivity = mRouteTable.get(matchedRoute);
         Intent intent = new Intent(mBaseContext, matchedActivity);
-        //find the key value in the path
-        intent = setKeyValueInThePath(matchedRoute, route.getUrl(), intent);
         intent = setOptionParams(route.getUrl(), intent);
         intent = setExtras(route.getExtras(), intent);
         return intent;

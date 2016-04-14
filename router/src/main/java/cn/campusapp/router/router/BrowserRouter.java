@@ -29,7 +29,6 @@ public class BrowserRouter extends BaseRouter {
         mBaseContext = context;
     }
 
-
     @Override
     public void open(IRoute route) {
         Uri uri = Uri.parse(route.getUrl());

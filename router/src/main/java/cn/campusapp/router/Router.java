@@ -2,10 +2,13 @@ package cn.campusapp.router;
 
 import android.content.Context;
 
+import cn.campusapp.router.route.CallbackRoute;
 import cn.campusapp.router.route.IRoute;
 import cn.campusapp.router.router.ActivityRouter;
 import cn.campusapp.router.router.BrowserRouter;
+import cn.campusapp.router.router.CallbackRouter;
 import cn.campusapp.router.router.IActivityRouteTableInitializer;
+import cn.campusapp.router.router.ICallbackRouteTableInitializer;
 import cn.campusapp.router.router.IRouter;
 
 /**
@@ -25,6 +28,15 @@ public class Router {
 
     public static synchronized void initActivityRouter(Context context, IActivityRouteTableInitializer initializer){
         RouterManager.getSingleton().initActivityRouter(context, initializer);
+    }
+
+
+    public static synchronized void initCallbackRouter(Context context, String scheme, ICallbackRouteTableInitializer initializer){
+        RouterManager.getSingleton().initCallbackRouter(context, initializer, scheme);
+    }
+
+    public static synchronized void initCallbackRouter(Context context, ICallbackRouteTableInitializer initializer){
+        RouterManager.getSingleton().initCallbackRouter(context, initializer);
     }
 
 
@@ -56,6 +68,10 @@ public class Router {
 
     public static void setBrowserRouter(BrowserRouter router){
         RouterManager.getSingleton().setBrowserRouter(router);
+    }
+
+    public static void setCallbackRouter(CallbackRouter router){
+        RouterManager.getSingleton().setCallbackRouter(router);
     }
 
 }

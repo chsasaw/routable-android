@@ -11,7 +11,9 @@ import java.util.List;
 import cn.campusapp.router.route.IRoute;
 import cn.campusapp.router.router.ActivityRouter;
 import cn.campusapp.router.router.BrowserRouter;
+import cn.campusapp.router.router.CallbackRouter;
 import cn.campusapp.router.router.IActivityRouteTableInitializer;
+import cn.campusapp.router.router.ICallbackRouteTableInitializer;
 import cn.campusapp.router.router.IRouter;
 import timber.log.Timber;
 
@@ -27,13 +29,13 @@ public class RouterManager {
     List<IRouter> mRouters = new LinkedList<>();
     ActivityRouter mActivityRouter = new ActivityRouter();   //Activity
     BrowserRouter mBrowserRouter = new BrowserRouter();  //浏览器
+    CallbackRouter mCallbackRouter = new CallbackRouter();
 
     private RouterManager(){}
 
     static RouterManager getSingleton(){
         return singleton;
     }
-
 
     public synchronized void addRouter(IRouter router){
         if(router != null){
@@ -62,13 +64,24 @@ public class RouterManager {
         initActivityRouter(context, initializer, null);
     }
 
-
     public synchronized void initActivityRouter(Context context, IActivityRouteTableInitializer initializer, String scheme){
         mActivityRouter.init(context, initializer);
         if(!TextUtils.isEmpty(scheme)) {
             mActivityRouter.setMatchScheme(scheme);
         }
         addRouter(mActivityRouter);
+    }
+
+    public synchronized void initCallbackRouter(Context context, ICallbackRouteTableInitializer initializer){
+        initCallbackRouter(context, initializer, null);
+    }
+
+    public synchronized void initCallbackRouter(Context context, ICallbackRouteTableInitializer initializer, String scheme){
+        mCallbackRouter.init(context, initializer);
+        if(!TextUtils.isEmpty(scheme)) {
+            mCallbackRouter.setMatchScheme(scheme);
+        }
+        addRouter(mCallbackRouter);
     }
 
     public List<IRouter> getRouters(){
@@ -124,6 +137,10 @@ public class RouterManager {
         addRouter(router);
     }
 
-
-
+    /**
+     * set your own CallbackRouter
+     */
+    public void setCallbackRouter(CallbackRouter router){
+        addRouter(router);
+    }
 }

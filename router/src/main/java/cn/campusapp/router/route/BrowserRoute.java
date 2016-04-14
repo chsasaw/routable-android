@@ -11,8 +11,6 @@ public class BrowserRoute extends BaseRoute {
         super(router, url);
     }
 
-
-
     public static class Builder {
         String mUrl;
         IRouter mRouter;
